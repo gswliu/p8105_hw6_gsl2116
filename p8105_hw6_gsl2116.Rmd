@@ -62,13 +62,21 @@ Homicides in which the victim is non-white are far less likely to be resolved co
 
 hom_allcities =
   homicides %>% 
-  group_by(city_state) %>% 
   select(city_state, victim_age, victim_sex, victim_race, resolved) %>% 
+  mutate(victim_race = fct_relevel(victim_race, "White")) %>% 
+  group_by(city_state) %>% 
   nest() %>% 
   mutate(models = map(data, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())),
          results = map(models, broom::tidy)) %>% 
-  select(results) %>% 
-  unnest()
+  select(-data) %>% 
+  unnest() %>%
+  filter(term == "victim_raceNon-White") %>% 
+  broom::tidy() %>% 
+  mutate(OR = exp(estimate),
+         OR_lower = exp(estimate - 1.96*std.error),
+         OR_upper = exp(estimate + 1.96*std.error)) %>%
+  select(term, log_OR = estimate, OR, OR_upper, OR_lower, p.value) %>% 
+  knitr::kable(digits = 3)
 ```
 
 

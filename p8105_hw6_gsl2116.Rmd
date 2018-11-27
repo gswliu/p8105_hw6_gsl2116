@@ -7,8 +7,33 @@ output: github_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+library(purrr)
+library(skimr)
+library(knitr)
+
+theme_set(theme_minimal())
 ```
 
 ## P8105 Homework 6
 
+### Problem 1
+```{r homicide data}
+# Create a city_state variable (e.g. “Baltimore, MD”), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO – these don’t report victim race. Also omit Tulsa, AL – this is a data entry mistake. Modifiy victim_race to have categories white and non-white, with white as the reference category. Be sure that victim_age is numeric.
+
+homicides = 
+  read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
+  mutate(city_state = paste(city, state, sep = ", "),
+         victim_race = ifelse(victim_race != "White", "Not White", "White")) %>% 
+  transform(reported_date = as.Date(as.character(reported_date), "%Y%m%d"), 
+            victim_age = as.numeric(victim_age)) %>% 
+  select(uid, reported_date, city_state, everything()) %>% 
+  select(-city, -state) %>% 
+  filter(!city_state %in% c("Tulsa, AL", "Dallas, TX", "Phoenix, AZ", "Kansas City, MO")) %>% 
+  janitor::clean_names()
+
+
+```
 

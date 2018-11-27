@@ -1,0 +1,14 @@
+---
+title: "P8105 HW 6"
+author: "Grace Liu"
+date: "11/27/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## P8105 Homework 6
+
+

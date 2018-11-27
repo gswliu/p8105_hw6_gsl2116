@@ -26,14 +26,41 @@ theme_set(theme_minimal())
 homicides = 
   read_csv("https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv") %>% 
   mutate(city_state = paste(city, state, sep = ", "),
-         victim_race = ifelse(victim_race != "White", "Not White", "White")) %>% 
+         victim_race = ifelse(victim_race != "White", "Non-White", "White"),
+         resolved = ifelse(disposition == "Closed by arrest", 1, 0)) %>% 
   transform(reported_date = as.Date(as.character(reported_date), "%Y%m%d"), 
             victim_age = as.numeric(victim_age)) %>% 
   select(uid, reported_date, city_state, everything()) %>% 
   select(-city, -state) %>% 
   filter(!city_state %in% c("Tulsa, AL", "Dallas, TX", "Phoenix, AZ", "Kansas City, MO")) %>% 
   janitor::clean_names()
-
-
 ```
+
+```{r baltimore or}
+# For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race (as just defined) as predictors. Save the output of glm as an R object; apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed.
+
+hom_baltimore = homicides %>% 
+  filter(city_state == "Baltimore, MD") %>% 
+  mutate(victim_race = fct_relevel(victim_race, "White"))
+
+fit_baltimore = hom_baltimore%>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) 
+
+fit_baltimore %>% 
+  broom::tidy() %>% 
+  mutate(OR = exp(estimate),
+         OR_lower = exp(estimate - 1.96*std.error),
+         OR_upper = exp(estimate + 1.96*std.error)) %>%
+  select(term, log_OR = estimate, OR, OR_upper, OR_lower, p.value) %>% 
+  knitr::kable(digits = 3)
+```
+
+Homicides in which the victim is non-white are far less likely to be resolved compared to homicides where the victim is white. In cases with non-white victims, the odds of solving the homicide are 0.441 times that of cases with white victims (95% CI: 0.315, 0.620).
+
+```{r}
+# Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
+# 
+# Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
+```
+
 

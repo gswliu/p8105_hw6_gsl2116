@@ -11,10 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(dplyr)
 library(purrr)
-library(skimr)
 library(knitr)
+library(modelr)
+library(mgcv)
 
 theme_set(theme_minimal())
+set.seed(1)
 ```
 
 ## P8105 Homework 6
@@ -105,19 +107,73 @@ birthweight =
          malform = as.factor(malform),
          frace = as.factor(frace), 
          mrace = as.factor(mrace))
+
+birthweight %>% 
+  ggplot(aes(x = bwt)) + 
+  geom_histogram()
 ```
+
+Birthweight appears to be relatively normally distributed.
 
 ```{r}
 # Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
 
+model1 = lm(bwt ~ babysex + momage + wtgain + bhead, data = birthweight)
+model2 = lm(bwt ~ babysex + mrace, data = birthweight)
+model3 = lm(bwt ~ babysex + gaweeks + bhead + blength, data = birthweight)
 
+summary(model1) # Chose this model as it was of the most clinical interest.
+
+birthweight %>% 
+  add_predictions(model1) %>%
+  add_residuals(model1) %>%
+  ggplot(aes(y = resid, x = pred)) + 
+  geom_point(alpha = 0.25) +
+  labs(x = "Fitted Value",
+       y = "Residual",
+       title = "Residuals against fitted values")
 ```
+
+I chose to model baby's sex, mom's age (at deliver), mom's weight gain during pregnancy, and baby's head circumference as predictors of baby's birthweight. Mother's age at delivery and weight gain during pregnancy have both been shown to be factors associated with premature birth and low birthweight babies, so I felt it was fitting that they may also be associated with overall infant birthweight. Head circumference is often closely associated with gestational age as well as fetal growth, so I also hypothesized that this may influence birthweight. Finally, I included baby's sex in all my initially proposed models in order to control for weight differences due to sex.
 
 ```{r}
 # Compare your model to two others:
 # One using length at birth and gestational age as predictors (main effects only)
-# One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-# Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+compare1 = lm(bwt ~ blength + gaweeks, data = birthweight)
+summary(compare1)
 
+# One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+compare2 = lm(bwt ~ bhead + blength + babysex + 
+                        bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = birthweight)
+summary(compare2)
+
+# Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+bwt_crossv = crossv_mc(birthweight, 100) %>% 
+    mutate(train = map(train, as_tibble),
+           test  = map(test, as_tibble))
+
+bwt_crossv2 =
+bwt_crossv %>% 
+  mutate(model1 = map(train, ~lm(bwt ~ babysex + momage + wtgain + bhead, data = .x)),
+         comp1 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         comp2 = map(train, ~lm(bwt ~ bhead + blength + babysex + 
+                        bhead*blength + blength*babysex + bhead*babysex + bhead*blength*babysex, data = .x))
+         ) %>% 
+  mutate(rmse_model1  = map2_dbl(model1,  test, ~rmse(model = .x, data = .y)),
+         rmse_comp1 = map2_dbl(comp1, test, ~rmse(model = .x, data = .y)),
+         rmse_comp2 = map2_dbl(comp2, test, ~rmse(model = .x, data = .y))
+         )
+
+bwt_crossv2 %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + 
+    geom_violin()  +
+  labs(x = "Model",
+       y = "RMSE",
+       title = "RMSEs for All Three Models")
 ```
 
+In comparing my model to the two comparison models, I would chose the Comparison Model 2 that includes head circumference, length, sex, and all interactions (including the three-way interaction). My model was close to Comparison Model 1, but I think my model could have benefited from some interaction terms.

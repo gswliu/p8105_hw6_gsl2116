@@ -71,9 +71,9 @@ hom_allcities = homicides %>%
   mutate(OR = exp(estimate),
          OR_lower = exp(estimate - 1.96*std.error),
          OR_upper = exp(estimate + 1.96*std.error)) %>%
-  select(city_state, log_OR = estimate, OR, OR_upper, OR_lower, p.value)
+  select(city_state, log_OR = estimate, OR, OR_upper, OR_lower, p.value) %>% 
+  mutate(p.value = round(p.value, digits = 4))
 ```
-
 
 ```{r homicides all cities plot}
 # Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
@@ -86,5 +86,38 @@ hom_allcities %>%
          title = "Odds ratio of homicides solved, comparing white to non-white victims, by city",
          subtitle = "ORs with 95% Confidence Intervals") +
     theme(axis.text.x = element_text(angle = 90, size = 7.5))
+```
+
+`r hom_allcities$city_state[match(min(hom_allcities$OR), hom_allcities$OR)]`, has the lowest OR of all cities in the dataset. With an OR of `r round(min(hom_allcities$OR), digits = 2)` (95% CI: `r round(hom_allcities$OR_lower[match(min(hom_allcities$OR), hom_allcities$OR)], digits = 2)`, `r round(hom_allcities$OR_upper[match(min(hom_allcities$OR), hom_allcities$OR)], digits = 2)`), this indicates that, in `r hom_allcities$city_state[match(min(hom_allcities$OR), hom_allcities$OR)]`, the odds of solving a homicide with a non-white victim are `r round(min(hom_allcities$OR), digits = 2)` times that of solving a homicide with a white victim, controlling for sex and age.
+
+On the contrary, `r hom_allcities$city_state[match(max(hom_allcities$OR), hom_allcities$OR)]`, has the lowest OR of all cities in the dataset [OR: `r round(max(hom_allcities$OR), digits = 2)` (95% CI: `r round(hom_allcities$OR_lower[match(max(hom_allcities$OR), hom_allcities$OR)], digits = 2)`, `r round(hom_allcities$OR_upper[match(max(hom_allcities$OR), hom_allcities$OR)], digits = 2)`)]. In `r hom_allcities$city_state[match(max(hom_allcities$OR), hom_allcities$OR)]`, controlling for sex and age, the odds of solving a homicide with a non-white victim are `r round(min(hom_allcities$OR), digits = 2)` times that of solving a homicide with a white victim.
+
+Of the `r nrow(hom_allcities)` cities in the dataset, there are `r nrow(subset(hom_allcities, p.value < 0.05))` cities where the p-value is < 0.05. This means that the OR for solving homicides comparing non-white victims to white victims is statistically significant and appreciably different than the null value of OR = 1.
+
+### Problem 2
+```{r}
+# Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
+
+birthweight = 
+  read_csv("http://p8105.com/data/birthweight.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(babysex = as.factor(babysex), 
+         malform = as.factor(malform),
+         frace = as.factor(frace), 
+         mrace = as.factor(mrace))
+```
+
+```{r}
+# Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+
+
+```
+
+```{r}
+# Compare your model to two others:
+# One using length at birth and gestational age as predictors (main effects only)
+# One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+# Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
 ```
 
